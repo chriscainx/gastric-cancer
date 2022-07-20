@@ -1,0 +1,115 @@
+---
+title: "Integrating with other gastric cancer atlas"
+output:
+  html_document:
+    df_print: paged
+---
+
+In this demo, we integrate our dataset with the Sathe et al. gastric cancer single cell dataset. First, we load the gastric cancer dataset of this research into the environment. It can be loaded from the R data file `00.Processed Data/R_data.rds` or created using the normalized counts matrix and metadata we deposited on GEO.
+
+```{r fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+library(future)
+library(future.apply)
+library(readr)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(Seurat)
+options(future.globals.maxSize = 50*1024^3)
+plan("multicore", workers = 8)
+
+gcdata <- readRDS("R_data.rds")
+
+p1 <- DimPlot(gcdata, reduction = "umap", group.by = "Type", label = TRUE, repel = TRUE)
+p2 <- DimPlot(gcdata, reduction = "umap", group.by = "Tissue")
+p1 + p2
+```
+
+If the data is loaded from the normalized counts matrix and metadata we deposited on GEO, the following processes can be used to generate the above UMAP dimensions. Since the differences between major cell types are significant, no special preprocessing or parameters are required.
+
+```{r eval=FALSE}
+gcdata <- FindVariableFeatures(gcdata, verbose = FALSE)
+gcdata <- RunPCA(gcdata, npcs = 30, verbose = FALSE)
+gcdata <- RunUMAP(gcdata, reduction = "pca", dims = 1:30, verbose = FALSE)
+```
+
+Next, we download and prepare the Sathe et al. dataset.
+
+```{r eval=FALSE}
+download.file("https://dna-discovery.stanford.edu/download/1403/", "filtered_matrix.zip", method = "curl", extra = '-k')
+download.file("https://dna-discovery.stanford.edu/publicmaterial/datasets/gastric_scRNAseq/cell_labels.csv", "cell_labels.csv", method = "curl", extra = '-k')
+unzip("filtered_matrix.zip", exdir = "sathe_matrix")
+```
+
+Since the data is raw unprocessed counts of each sample, it needs to be merged and processed with the basic workflow.
+
+```{r fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+sathe_meta <- read_csv("cell_labels.csv")
+sathe_cells <- split(sathe_meta, sathe_meta$orig.ident)
+sathe_matrices <- future_lapply(names(sathe_cells), function(x){
+    mat <- Read10X(file.path('sathe_matrix', x))
+    cells <- substr(sathe_cells[[x]]$cell_barcode, 1, 16)
+    colnames(mat) <- substr(colnames(mat), 1, 16)
+    mat <- mat[, cells]
+    colnames(mat) <- sathe_cells[[x]]$cell_barcode
+    mat
+})
+sathe_matrix <- Reduce(cbind, sathe_matrices)
+sathe_metadata <- bind_rows(sathe_cells) %>% column_to_rownames("cell_barcode")
+
+sathedata <- CreateSeuratObject(sathe_matrix, meta.data = sathe_metadata)
+sathedata <- NormalizeData(sathedata, verbose = FALSE)
+sathedata <- ScaleData(sathedata, verbose = FALSE)
+sathedata <- FindVariableFeatures(sathedata, verbose = FALSE)
+sathedata <- RunPCA(sathedata, npcs = 30, verbose = FALSE)
+sathedata <- RunUMAP(sathedata, reduction = "pca", dims = 1:30, verbose = FALSE)
+
+# Visualization
+p1 <- DimPlot(sathedata, reduction = "umap", group.by = "final_celltype", label = TRUE, repel = TRUE)
+p2 <- DimPlot(sathedata, reduction = "umap", group.by = "condition")
+p1 + p2
+```
+
+Now, we perform data integration using the Seurat anchor-based method. Since both datasets are large, we adopt the RPCA method and reference-based workflow as explained [here](https://satijalab.org/seurat/articles/integration_large_datasets.html).
+
+```{r, message=FALSE, warning=FALSE}
+gcdata$Dataset <- "GC"
+sathedata$Dataset <- "Sathe"
+object_list <- list(gcdata, sathedata)
+anchors <- FindIntegrationAnchors(object.list = object_list, dims = 1:30, reference = 1, reduction = "rpca", verbose = FALSE)
+integrated_data <- IntegrateData(anchorset = anchors, dims = 1:30, verbose = FALSE)
+```
+
+After integration, the two datasets are merged and can be used for downstream visualizations and investigations. We can easily interpret from the following analysis that the two datasets are merged based on the biological phenotypes of cells, and unique characteristics of small/rare cell populations, such as the DC population, are well preserved without any tweaking of parameters or manual correction of the data. In addition, the Sathe et al. dataset has more observations of the epithelial cells, while our data has more observations of plasma, fibroblast, B, and T cells.
+
+```{r fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+integrated_data <- ScaleData(integrated_data, verbose = FALSE)
+integrated_data <- RunPCA(integrated_data, verbose = FALSE)
+integrated_data <- RunUMAP(integrated_data, dims = 1:30, verbose = FALSE)
+
+# Visualization
+p1 <- DimPlot(integrated_data, reduction = "umap", group.by = "Dataset")
+p2 <- DimPlot(integrated_data, reduction = "umap", group.by = "final_celltype", label = TRUE, repel = TRUE) + ggtitle("Sathe et al. Annotations")
+p1 + p2
+```
+
+It is possible to perform further clustering and *de novo* identification of cell populations on the integrated dataset. In the following example, the B cell population can be independently identified using expression of *MS4A1*, and matched with cluster 3.
+
+```{r fig.height=6, fig.width=12, message=FALSE, warning=FALSE}
+integrated_data <- FindNeighbors(integrated_data, verbose = FALSE)
+integrated_data <- FindClusters(integrated_data, verbose = FALSE)
+
+# Visualization
+p1 <- DimPlot(integrated_data, reduction = "umap", label = TRUE, repel = TRUE)
+p2 <- FeaturePlot(integrated_data, "MS4A1")
+p1 + p2
+```
+
+In summary, we demonstrated how to integrate our gastric cancer dataset with other single cell datasets. Apart from Seurat, other methods and workflows (such as [Harmony](https://github.com/immunogenomics/harmony), [Scanorama](https://github.com/brianhie/scanorama), [Monocle](http://cole-trapnell-lab.github.io/monocle-release/), [Scrattch](https://github.com/AllenInstitute/scrattch), etc) can be adopted to perform such integration. It is recommended to try different methods in such combinatorial analysis, in order to identify meaningful phenomena.
+
+```{r}
+sessionInfo()
+```
+
+
+
