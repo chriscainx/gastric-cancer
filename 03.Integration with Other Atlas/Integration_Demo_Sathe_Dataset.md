@@ -5,6 +5,8 @@ output:
     df_print: paged
 ---
 
+# Integrating with other gastric cancer atlas
+
 In this demo, we integrate our dataset with the Sathe et al. gastric cancer single cell dataset. First, we load the gastric cancer dataset of this research into the environment. It can be loaded from the R data file `00.Processed Data/R_data.rds` or created using the normalized counts matrix and metadata we deposited on GEO.
 
 
