@@ -4,6 +4,7 @@ This folder contains the processed single cell data compatible with R analysis, 
 
 - `gcdata` is a 10X formatted sparse matrix bundle containing cell expression matrix in UMI counts, cell IDs and gene IDs. This folder can be read by the Seurat package.
 - `cell_metadata.csv` is the cell metadata file containing sample IDs and cell type labels.
+- `bulk_rna_tpm.txt` is the bulk RNA-seq data in TPM unit.
 
 An R Seurat object can be generated from the gene expression counts matrix and metadata using following commands:
 
