@@ -2,6 +2,8 @@
 
 Here, we deposit the supporting code and data of our gastric cancer research (Kang et al., 2022) for availability to the broad scientific community. The code and data deposited here are free for academic use. Any other types of use are prohibited.
 
+Please note that GitLFS charges a fee for data downloading bandwidth. If you encounter the `This repository is over its data quota` notification, it indicates the free bandwidth has been used up by other downloaders. Please consider downloading the gene expression data directly from GEO. Code deposited in this repository will not be affected by the quota.
+
 ## Introduction
 
 ### Background
