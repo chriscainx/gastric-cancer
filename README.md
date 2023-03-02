@@ -5,10 +5,11 @@ Here, we deposit the supporting code and data of our gastric cancer research (Ka
 ✅
 We have received many requests for the raw UMI count matrix instead of the normalized matrix deposited on GEO. It is now put in the Processed Data folder.
 
+✅
 We also acknowledge that the online version of the Supplementary table has three lines accidentally missing. We are working to update the online version. We also provide the correct version in the Processed Data folder.
 
-Since GitLFS charges a fee for data downloading bandwidth, we now upload files with parts smaller than 25 mb.
 ✅
+Since GitLFS charges a fee for data downloading bandwidth, we now upload files with parts smaller than 25 mb.
 
 ## Introduction
 
