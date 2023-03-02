@@ -2,9 +2,10 @@
 
 This folder contains the processed single cell data compatible with R analysis, to facilitate the demonstrative usage in this repository.
 
-- `raw_counts.csv` is UMI count matrix.
+- `raw_counts.csv.gz` is UMI count matrix.
 - `cell_metadata.csv` is the cell metadata file containing sample IDs and cell type labels.
 - `bulk_rna_tpm.txt` is the bulk RNA-seq data in TPM unit.
+- `13059_2022_2828_MOESM2_ESM_added_missing.xlsx` is a corrected version of the paper's supplementary table.
 
 An R Seurat object can be generated from the gene expression counts matrix and metadata using following commands:
 
